@@ -1,4 +1,5 @@
-set(SRCS BreakPoints.cpp
+set(SRCS BreadCrumb.cpp
+		 BreakPoints.cpp
          CDUtils.cpp
          ColorUtil.cpp
          ENetUtil.cpp
