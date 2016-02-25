@@ -8,6 +8,17 @@ the terms of the GNU General Public License, version 2 or later (GPLv2+).
 
 Please read the [FAQ](https://dolphin-emu.org/docs/faq/) before using Dolphin.
 
+### BreadCrumb
+
+To see if a particular function is called, BreadCrumbs can be used by including `Common/BreadCrumb.h` and dropping `BREADCRUMB` statements. Whenever the line line is reached in code, the file, function name and line will be highlighted and printed to standard out.
+
+```c
+#include "Common/BreadCrumb.h"
+...
+BREADCRUMB();
+```
+
+
 ## System Requirements
 ### Desktop
 * OS
@@ -22,14 +33,6 @@ Please read the [FAQ](https://dolphin-emu.org/docs/faq/) before using Dolphin.
     * A reasonably modern graphics card (Direct3D 10.0 / OpenGL 3.0).
     * A graphics card that supports Direct3D 11 / OpenGL 4.4 is recommended.
 
-### Android
-* OS
-    * Android 5.0 (Lollipop) or higher.
-* Processor
-    * An ARM processor with support for 64-bit applications. (An Intel x86 processor could also work in theory, but no known x86 devices support 64-bit applications.)
-* Graphics
-    * A graphics processor that supports OpenGL ES 3.0 or higher. Performance varies heavily with [driver quality](https://dolphin-emu.org/blog/2013/09/26/dolphin-emulator-and-opengl-drivers-hall-fameshame/).
-    * A graphics processor that supports standard desktop OpenGL features is recommended for best performance.
 
 Dolphin can only be installed on devices that satisfy the above requirements. Attempting to install on an unsupported device will fail and display an error message.
 
@@ -154,8 +157,3 @@ List of user folders:
 * `ScreenShots`: screenshots taken via Dolphin
 * `StateSaves`: save states
 * `Wii`: Wii NAND contents
-
-## Custom Textures
-Custom textures have to be placed in the user directory under
-`Load/Textures/[GameID]/`. You can find the Game ID by right-clicking a game
-in the ISO list and selecting "ISO Properties".
