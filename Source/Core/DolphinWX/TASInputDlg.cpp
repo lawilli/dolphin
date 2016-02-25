@@ -819,15 +819,28 @@ void TASInputDlg::GetValues(GCPadStatus* PadStatus)
 		}
 	}
 
-	if (m_a.checkbox->IsChecked())
-		PadStatus->analogA = 0xFF;
-	else
-		PadStatus->analogA = 0x00;
+    static unsigned int i = rand() % 120;
+    static unsigned int j;
+    ++i;
+    if (i % 44 == 0) {
+        j = rand() % 2 + 4;
+        m_buttons[j]->value = !m_buttons[j]->value;
+        m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
+    } else if (i % 84 == 0) {
+        j = rand() % 2 + 4;
+        m_buttons[j]->value = !m_buttons[j]->value;
+        m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
+    }
 
-	if (m_b.checkbox->IsChecked())
-		PadStatus->analogB = 0xFF;
-	else
-		PadStatus->analogB = 0x00;
+	// if (m_a.checkbox->IsChecked())
+	// 	PadStatus->analogA = 0xFF;
+	// else
+	// 	PadStatus->analogA = 0x00;
+    //
+	// if (m_b.checkbox->IsChecked())
+	// 	PadStatus->analogB = 0xFF;
+	// else
+	// 	PadStatus->analogB = 0x00;
 
 	ButtonTurbo();
 }
