@@ -5,6 +5,8 @@
 #include <strings.h>
 #include <time.h>
 
+#include "Core/PowerPC/PowerPC.h"
+
 /*
 Usage: Copy and Paste
 ------------------------------
@@ -51,6 +53,10 @@ class BreadCrumb
 
 			std::cout << KYEL << t << " " << KWHT << path(file) << " " << KCYN << fun << " " << KGRN << line << " " << KNRM << std::endl;
 			//printf("%sFROM(%s): %s%s %s%s %s%d %s\n", KYEL, t, KWHT, path(file), KCYN, fun, KGRN, line, KNRM);
+
+            // Display known features
+            printf("P1 Damage (0x0046b94e): %u\n", 0x0000FFFF & PowerPC::HostRead_U32(0x0046b94e));
+            printf("P2 Damage (0x00453f6e): %u\n", PowerPC::HostRead_U32(0x00453f6e));
 		}
 
 	private:
