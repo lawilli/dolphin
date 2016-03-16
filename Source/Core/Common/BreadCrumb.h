@@ -57,6 +57,16 @@ class BreadCrumb
             // Display known features
             printf("P1 Damage (0x0046b94e): %u\n", 0x0000FFFF & PowerPC::HostRead_U32(0x0046b94e));
             printf("P2 Damage (0x00453f6e): %u\n", PowerPC::HostRead_U32(0x00453f6e));
+
+            uint32_t p1x = PowerPC::HostRead_U32(0x00453090);
+            uint32_t p1y = PowerPC::HostRead_U32(0x00453094);
+            uint32_t p2x = PowerPC::HostRead_U32(0x00453f20);
+            uint32_t p2y = PowerPC::HostRead_U32(0x00453f24);
+
+            printf("P1 X (0x00453090): %f\n", *((float*)&p1x));
+            printf("P1 Y (0x00453094): %f\n", *((float*)&p1y));
+            printf("P2 X (0x00453420): %f\n", *((float*)&p2x));
+            printf("P2 Y (0x00453f24): %f\n", *((float*)&p2y));
 		}
 
 	private:

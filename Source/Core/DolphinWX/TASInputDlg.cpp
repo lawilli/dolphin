@@ -27,6 +27,14 @@
 #include "InputCommon/GCPadStatus.h"
 #include "InputCommon/InputConfig.h"
 
+#include "Common/BreadCrumb.h"
+#include "Core/PowerPC/PowerPC.h"
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+
+
 wxDEFINE_EVENT(INVALIDATE_BUTTON_EVENT, wxCommandEvent);
 wxDEFINE_EVENT(INVALIDATE_CONTROL_EVENT, wxCommandEvent);
 
@@ -207,8 +215,49 @@ void TASInputDlg::CreateWiiLayout(int num)
 	FinishLayout();
 }
 
+
+void TASInputDlg::SetNovaState() {
+    static unsigned int id = 0;
+
+    NovaState temp;
+
+    memset(&temp, 0x00, sizeof(NovaState));
+
+    temp.id = ++id;
+    temp.p1d = 0x0000FFFF & PowerPC::HostRead_U32(ADDR_P1D);
+    temp.p2d = 0x0000FFFF & PowerPC::HostRead_U32(ADDR_P2D);
+    // temp.p1x = *((float*)PowerPC::HostRead_U32(ADDR_P1X));
+    // temp.p2x = *((float*)PowerPC::HostRead_U32(ADDR_P2X));
+    // temp.p1y = *((float*)PowerPC::HostRead_U32(ADDR_P1Y));
+    // temp.p2y = *((float*)PowerPC::HostRead_U32(ADDR_P2Y));
+
+    memcpy(this->state, &temp, sizeof(NovaState));
+}
+
+void TASInputDlg::InitializeSharedMemory() {
+    BREADCRUMB();
+
+    int flags = O_CREAT | O_RDWR;
+    int perms = 0777;
+
+    // ftruncate
+    this->shmfd = shm_open(DOLPHIN_OUT, flags, perms);
+    if (this->shmfd == -1) {
+        printf("\nErrno: %d\n\n", errno);
+    }
+
+    ftruncate(this->shmfd, sizeof(NovaState));
+    this->state = (NovaState*)mmap(NULL, sizeof(NovaState), PROT_WRITE, MAP_SHARED, this->shmfd, 0);
+    // if (addr == MAP_FAILED)
+    printf("\n\nthis->shmfd: %d\n", this->shmfd);
+
+}
+
 void TASInputDlg::FinishLayout()
 {
+    // this.novaState = new Nova();
+    InitializeSharedMemory();
+
 	Bind(wxEVT_CLOSE_WINDOW, &TASInputDlg::OnCloseWindow, this);
 	Bind(INVALIDATE_BUTTON_EVENT, &TASInputDlg::UpdateFromInvalidatedButton, this);
 	Bind(INVALIDATE_CONTROL_EVENT, &TASInputDlg::UpdateFromInvalidatedControl, this);
@@ -305,6 +354,8 @@ void TASInputDlg::HandleExtensionChange()
 
 void TASInputDlg::CreateGCLayout()
 {
+    BREADCRUMB();
+
 	if (m_has_layout)
 		return;
 
@@ -562,8 +613,8 @@ void TASInputDlg::SetWiiButtons(u16* butt)
 
 void TASInputDlg::GetKeyBoardInput(GCPadStatus* PadStatus)
 {
-	SetStickValue(&m_main_stick.x_cont, PadStatus->stickX);
-	SetStickValue(&m_main_stick.y_cont, PadStatus->stickY);
+	// SetStickValue(&m_main_stick.x_cont, PadStatus->stickX);
+	// SetStickValue(&m_main_stick.y_cont, PadStatus->stickY);
 
 	SetStickValue(&m_c_stick.x_cont, PadStatus->substickX);
 	SetStickValue(&m_c_stick.y_cont, PadStatus->substickY);
@@ -819,18 +870,126 @@ void TASInputDlg::GetValues(GCPadStatus* PadStatus)
 		}
 	}
 
-    static unsigned int i = rand() % 120;
-    static unsigned int j;
-    ++i;
-    if (i % 44 == 0) {
-        j = rand() % 2 + 4;
-        m_buttons[j]->value = !m_buttons[j]->value;
-        m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
-    } else if (i % 84 == 0) {
-        j = rand() % 2 + 4;
-        m_buttons[j]->value = !m_buttons[j]->value;
-        m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
+    SetNovaState();
+
+    uint32_t p1xA = PowerPC::HostRead_U32(0x00453090);
+    uint32_t p1yA = PowerPC::HostRead_U32(0x00453094);
+    uint32_t p2xA = PowerPC::HostRead_U32(0x00453f20);
+    uint32_t p2yA = PowerPC::HostRead_U32(0x00453424);
+
+    float p1x = *((float*)&p1xA);
+    float p1y = *((float*)&p1yA);
+    float p2x = *((float*)&p2xA);
+    float p2y = *((float*)&p2yA);
+
+    uint32_t p1d = 0x0000FFFF & PowerPC::HostRead_U32(0x0046b94e);
+    uint32_t p2d = 0x0000FFFF & PowerPC::HostRead_U32(0x00453f6e);
+
+    static bool bflag = false;
+
+    //-------------------------------------------------------------------------
+
+    if (p1x > 87.16 && p1x < 87.2) {
+		//Right Ledge
+		SetSliderValue(m_controls[0], 0);
+		SetSliderValue(m_controls[1], 255);
+		m_buttons[4]->value = !m_buttons[4]->value;
+		m_buttons[4]->checkbox->SetValue(!(m_buttons[4]->value));
+	} else if (p1x < -87.16 && p1x > -87.2) {
+		//Left Ledge
+		SetSliderValue(m_controls[0], 255);
+		SetSliderValue(m_controls[1], 255);
+		m_buttons[4]->value = !m_buttons[4]->value;
+		m_buttons[4]->checkbox->SetValue(!(m_buttons[4]->value));
+	} else if (p1x > 87.2 ) {
+		//Right Recovery
+		SetSliderValue(m_controls[0], 0);
+		SetSliderValue(m_controls[1], 255);
+		// m_buttons[5]->value = !m_buttons[5]->value;
+		// m_buttons[5]->checkbox->SetValue(!(m_buttons[5]->value));
+	} else if (p1x < -87.2) {
+		//Left Recovery
+		SetSliderValue(m_controls[0], 255);
+		SetSliderValue(m_controls[1], 255);
+		// m_buttons[5]->value = !m_buttons[5]->value;
+		// m_buttons[5]->checkbox->SetValue(!(m_buttons[5]->value));
+	} else if (p1x > p2x && p2x > -87.2 && p2x < 87.2 && p2y > -16.2) {
+		//Follow player
+		SetSliderValue(m_controls[0], 0);
+		SetSliderValue(m_controls[1], 128);
+	} else if (p1x < p2x && p2x > -87.2 && p2x < 87.2 && p2y > -16.2) {
+		//Follow player
+		SetSliderValue(m_controls[0], 255);
+		SetSliderValue(m_controls[1], 128);
+	} else if (p1x > 0) {
+		//Return to middle
+		SetSliderValue(m_controls[0], 0);
+		SetSliderValue(m_controls[1], 128);
+	} else if (p1x < 0) {
+		//return to middle
+		SetSliderValue(m_controls[0], 255);
+		SetSliderValue(m_controls[1], 128);
+	} else {
+		SetSliderValue(m_controls[0], 128);
+		SetSliderValue(m_controls[1], 128);
+	}
+
+
+	// m_buttons[0] = joystick
+	// m_buttons[1] = jump
+	// m_buttons[4] = 'A'
+	// m_buttons[5] = 'B'
+
+    //-------------------------------------------------------------------------
+
+    //
+    // if (p1x > 80.0) {
+    //     SetSliderValue(m_controls[0], 0);
+    //     SetSliderValue(m_controls[1], 255);
+    // }
+    // else if (p1x < (80.0 * -1)) {
+    //     SetSliderValue(m_controls[0], 255);
+    //     SetSliderValue(m_controls[1], 255);
+    // }
+    // else if (p1x > p2x) {
+    //     SetSliderValue(m_controls[0], 0);
+    //     SetSliderValue(m_controls[1], 128);
+    // }
+    // else if (p1x < p2x) {
+    //     SetSliderValue(m_controls[0], 255);
+    //     SetSliderValue(m_controls[1], 128);
+    // }
+    if (std::abs(p1x - p2x) < 5.5 && std::abs(p1y - p2y) < 0.9) {
+        SetSliderValue(m_controls[0], 128);
+        SetSliderValue(m_controls[1], 0);
+        m_buttons[5]->value = true;
+        m_buttons[5]->checkbox->SetValue(true);
+        bflag = true;
+    } else {
+
+        if (bflag) {
+            SetSliderValue(m_controls[0], 128);
+            SetSliderValue(m_controls[1], 128);
+            m_buttons[5]->value = false;
+            m_buttons[5]->checkbox->SetValue(false);
+            bflag = false;
+        }
     }
+    // } else {
+    //     static unsigned int i = rand() % 120;
+    //     static unsigned j;
+    //     ++i;
+    //
+    //     if (i % 44 ==0) {
+    //         j = rand() % 2 + 4;
+    //         m_buttons[j]->value = !m_buttons[j]->value;
+    //         m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
+    //     } else if (i % 84 == 0) {
+    //         j = rand() % 2 + 4;
+    //         m_buttons[j]->value = !m_buttons[j]->value;
+    //         m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
+    //     }
+    // }
 
 	// if (m_a.checkbox->IsChecked())
 	// 	PadStatus->analogA = 0xFF;
@@ -917,6 +1076,8 @@ void TASInputDlg::UpdateStickBitmap(Stick stick)
 
 void TASInputDlg::OnCloseWindow(wxCloseEvent& event)
 {
+    BREADCRUMB();
+
 	if (event.CanVeto())
 	{
 		event.Skip(false);

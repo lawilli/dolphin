@@ -13,6 +13,16 @@
 #include "Core/HW/WiimoteEmu/WiimoteEmu.h"
 #include "InputCommon/GCPadStatus.h"
 
+#define DOLPHIN_OUT "NOVA_DOLPHIN_OUT"
+#define DOLPHIN_IN "NOVA_DOLPHIN_IN"
+
+#define ADDR_P1D 0x0046b94e
+#define ADDR_P2D 0x00453f6e
+#define ADDR_P1X 0x00453090
+#define ADDR_P2X 0x00453f20
+#define ADDR_P1Y 0x00453094
+#define ADDR_P2Y 0x00453424
+
 class wxCheckBox;
 class wxSlider;
 class wxStaticBitmap;
@@ -54,6 +64,21 @@ class TASInputDlg : public wxDialog
 		const int ID_CC_R_STICK = 1004;
 		int m_eleID = 1005;
 
+        // Shared Memory Key
+        int shmfd;
+
+        typedef struct {
+            unsigned int id; // For Debugging
+            unsigned int p1d;
+            unsigned int p2d;
+            float p1x;
+            float p2x;
+            float p1y;
+            float p2y;
+        } NovaState;
+
+        NovaState *state;
+
 		struct Control
 		{
 			wxTextCtrl* text;
@@ -82,6 +107,9 @@ class TASInputDlg : public wxDialog
 			Control x_cont;
 			Control y_cont;
 		};
+
+        void SetNovaState();
+        void InitializeSharedMemory();
 
 		wxBoxSizer* CreateCCLayout();
 		void FinishLayout();
