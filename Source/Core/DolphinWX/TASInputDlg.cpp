@@ -885,6 +885,12 @@ void TASInputDlg::GetValues(GCPadStatus* PadStatus)
     uint32_t p1d = 0x0000FFFF & PowerPC::HostRead_U32(0x0046b94e);
     uint32_t p2d = 0x0000FFFF & PowerPC::HostRead_U32(0x00453f6e);
 
+
+    //BREADCRUMB();
+    //if (this->state->bmask > 0) {
+    //    printf(KGRN"id: %d\nbmask: %x\n" KNRM, this->state->id, this->state->bmask);
+    //}
+
     static bool bflag = false;
 
     //-------------------------------------------------------------------------

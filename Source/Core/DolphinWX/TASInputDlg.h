@@ -75,6 +75,8 @@ class TASInputDlg : public wxDialog
             float p2x;
             float p1y;
             float p2y;
+            uint8_t bmask;
+            uint32_t padding[10];
         } NovaState;
 
         NovaState *state;
