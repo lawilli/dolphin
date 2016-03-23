@@ -31,7 +31,7 @@
 #include "Core/PowerPC/PowerPC.h"
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <stdio.h>
+#include <cstring>
 
 
 
@@ -226,12 +226,19 @@ void TASInputDlg::SetNovaState() {
     temp.id = ++id;
     temp.p1d = 0x0000FFFF & PowerPC::HostRead_U32(ADDR_P1D);
     temp.p2d = 0x0000FFFF & PowerPC::HostRead_U32(ADDR_P2D);
-    // temp.p1x = *((float*)PowerPC::HostRead_U32(ADDR_P1X));
-    // temp.p2x = *((float*)PowerPC::HostRead_U32(ADDR_P2X));
-    // temp.p1y = *((float*)PowerPC::HostRead_U32(ADDR_P1Y));
-    // temp.p2y = *((float*)PowerPC::HostRead_U32(ADDR_P2Y));
+    unsigned int p1xA = PowerPC::HostRead_U32(ADDR_P1X);
+    unsigned int p2xA = PowerPC::HostRead_U32(ADDR_P2X);
+    unsigned int p1yA = PowerPC::HostRead_U32(ADDR_P1Y);
+    unsigned int p2yA = PowerPC::HostRead_U32(ADDR_P2Y);
 
-    memcpy(this->state, &temp, sizeof(NovaState));
+
+    memcpy(&(temp.p1x), &p1xA, sizeof(unsigned int));
+    memcpy(&(temp.p1y), &p1yA, sizeof(unsigned int));
+    memcpy(&(temp.p2x), &p2xA, sizeof(unsigned int));
+    memcpy(&(temp.p2y), &p2yA, sizeof(unsigned int));
+
+    // An effort to avoid overrwriting controls
+    memcpy(this->state, &temp, 7 * sizeof(unsigned int));
 }
 
 void TASInputDlg::InitializeSharedMemory() {
@@ -613,8 +620,6 @@ void TASInputDlg::SetWiiButtons(u16* butt)
 
 void TASInputDlg::GetKeyBoardInput(GCPadStatus* PadStatus)
 {
-	// SetStickValue(&m_main_stick.x_cont, PadStatus->stickX);
-	// SetStickValue(&m_main_stick.y_cont, PadStatus->stickY);
 
 	SetStickValue(&m_c_stick.x_cont, PadStatus->substickX);
 	SetStickValue(&m_c_stick.y_cont, PadStatus->substickY);
@@ -653,16 +658,6 @@ void TASInputDlg::GetKeyBoardInput(u8* data, WiimoteEmu::ReportFeatures rptf, in
 		SetSliderValue(&m_y_cont, dt->y << 2 | ((wm_buttons*)coreData)->acc_y_lsb << 1);
 		SetSliderValue(&m_z_cont, dt->z << 2 | ((wm_buttons*)coreData)->acc_z_lsb << 1);
 	}
-
-	// I don't think this can be made to work in a sane manner.
-	//if (irData)
-	//{
-	//	u16 x = 1023 - (irData[0] | ((irData[2] >> 4 & 0x3) << 8));
-	//	u16 y = irData[1] | ((irData[2] >> 6 & 0x3) << 8);
-
-	//	SetStickValue(&m_main_stick.x_cont.set_by_keyboard, &m_main_stick.x_cont.value, m_main_stick.x_cont.text, x, 561);
-	//	SetStickValue(&m_main_stick.y_cont.set_by_keyboard, &m_main_stick.y_cont.value, m_main_stick.y_cont.text, y, 486);
-	//}
 
 	if (extData && ext == 1)
 	{
@@ -870,144 +865,28 @@ void TASInputDlg::GetValues(GCPadStatus* PadStatus)
 		}
 	}
 
+    // LAWRENCE: Set NovaState for NovaReader
     SetNovaState();
 
-    uint32_t p1xA = PowerPC::HostRead_U32(0x00453090);
-    uint32_t p1yA = PowerPC::HostRead_U32(0x00453094);
-    uint32_t p2xA = PowerPC::HostRead_U32(0x00453f20);
-    uint32_t p2yA = PowerPC::HostRead_U32(0x00453424);
+    int i = 0;
 
-    float p1x = *((float*)&p1xA);
-    float p1y = *((float*)&p1yA);
-    float p2x = *((float*)&p2xA);
-    float p2y = *((float*)&p2yA);
-
-    uint32_t p1d = 0x0000FFFF & PowerPC::HostRead_U32(0x0046b94e);
-    uint32_t p2d = 0x0000FFFF & PowerPC::HostRead_U32(0x00453f6e);
-
-
-    //BREADCRUMB();
-    //if (this->state->bmask > 0) {
-    //    printf(KGRN"id: %d\nbmask: %x\n" KNRM, this->state->id, this->state->bmask);
-    //}
-
-    static bool bflag = false;
-
-    //-------------------------------------------------------------------------
-
-    if (p1x > 87.16 && p1x < 87.2) {
-		//Right Ledge
-		SetSliderValue(m_controls[0], 0);
-		SetSliderValue(m_controls[1], 255);
-		m_buttons[4]->value = !m_buttons[4]->value;
-		m_buttons[4]->checkbox->SetValue(!(m_buttons[4]->value));
-	} else if (p1x < -87.16 && p1x > -87.2) {
-		//Left Ledge
-		SetSliderValue(m_controls[0], 255);
-		SetSliderValue(m_controls[1], 255);
-		m_buttons[4]->value = !m_buttons[4]->value;
-		m_buttons[4]->checkbox->SetValue(!(m_buttons[4]->value));
-	} else if (p1x > 87.2 ) {
-		//Right Recovery
-		SetSliderValue(m_controls[0], 0);
-		SetSliderValue(m_controls[1], 255);
-		// m_buttons[5]->value = !m_buttons[5]->value;
-		// m_buttons[5]->checkbox->SetValue(!(m_buttons[5]->value));
-	} else if (p1x < -87.2) {
-		//Left Recovery
-		SetSliderValue(m_controls[0], 255);
-		SetSliderValue(m_controls[1], 255);
-		// m_buttons[5]->value = !m_buttons[5]->value;
-		// m_buttons[5]->checkbox->SetValue(!(m_buttons[5]->value));
-	} else if (p1x > p2x && p2x > -87.2 && p2x < 87.2 && p2y > -16.2) {
-		//Follow player
-		SetSliderValue(m_controls[0], 0);
-		SetSliderValue(m_controls[1], 128);
-	} else if (p1x < p2x && p2x > -87.2 && p2x < 87.2 && p2y > -16.2) {
-		//Follow player
-		SetSliderValue(m_controls[0], 255);
-		SetSliderValue(m_controls[1], 128);
-	} else if (p1x > 0) {
-		//Return to middle
-		SetSliderValue(m_controls[0], 0);
-		SetSliderValue(m_controls[1], 128);
-	} else if (p1x < 0) {
-		//return to middle
-		SetSliderValue(m_controls[0], 255);
-		SetSliderValue(m_controls[1], 128);
-	} else {
-		SetSliderValue(m_controls[0], 128);
-		SetSliderValue(m_controls[1], 128);
-	}
-
-
-	// m_buttons[0] = joystick
-	// m_buttons[1] = jump
-	// m_buttons[4] = 'A'
-	// m_buttons[5] = 'B'
-
-    //-------------------------------------------------------------------------
-
-    //
-    // if (p1x > 80.0) {
-    //     SetSliderValue(m_controls[0], 0);
-    //     SetSliderValue(m_controls[1], 255);
-    // }
-    // else if (p1x < (80.0 * -1)) {
-    //     SetSliderValue(m_controls[0], 255);
-    //     SetSliderValue(m_controls[1], 255);
-    // }
-    // else if (p1x > p2x) {
-    //     SetSliderValue(m_controls[0], 0);
-    //     SetSliderValue(m_controls[1], 128);
-    // }
-    // else if (p1x < p2x) {
-    //     SetSliderValue(m_controls[0], 255);
-    //     SetSliderValue(m_controls[1], 128);
-    // }
-    if (std::abs(p1x - p2x) < 5.5 && std::abs(p1y - p2y) < 0.9) {
-        SetSliderValue(m_controls[0], 128);
-        SetSliderValue(m_controls[1], 0);
-        m_buttons[5]->value = true;
-        m_buttons[5]->checkbox->SetValue(true);
-        bflag = true;
-    } else {
-
-        if (bflag) {
-            SetSliderValue(m_controls[0], 128);
-            SetSliderValue(m_controls[1], 128);
-            m_buttons[5]->value = false;
-            m_buttons[5]->checkbox->SetValue(false);
-            bflag = false;
-        }
+    // LAWRENCE: Update Controls
+    if (m_controls[0]->value != this->state->controls[0]) {
+        SetSliderValue(m_controls[0], this->state->controls[0]);
     }
-    // } else {
-    //     static unsigned int i = rand() % 120;
-    //     static unsigned j;
-    //     ++i;
-    //
-    //     if (i % 44 ==0) {
-    //         j = rand() % 2 + 4;
-    //         m_buttons[j]->value = !m_buttons[j]->value;
-    //         m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
-    //     } else if (i % 84 == 0) {
-    //         j = rand() % 2 + 4;
-    //         m_buttons[j]->value = !m_buttons[j]->value;
-    //         m_buttons[j]->checkbox->SetValue(!(m_buttons[j]->value));
-    //     }
-    // }
+    if (m_controls[1]->value != this->state->controls[1]) {
+        SetSliderValue(m_controls[1], this->state->controls[1]);
+    }
 
-	// if (m_a.checkbox->IsChecked())
-	// 	PadStatus->analogA = 0xFF;
-	// else
-	// 	PadStatus->analogA = 0x00;
-    //
-	// if (m_b.checkbox->IsChecked())
-	// 	PadStatus->analogB = 0xFF;
-	// else
-	// 	PadStatus->analogB = 0x00;
+    for (i = 0; i < 6; ++i) {
+        if (m_buttons[i]->value != this->state->buttons[i]) {
+            m_buttons[i]->value = this->state->buttons[i];
+            m_buttons[i]->checkbox->SetValue(this->state->buttons[i]);
+        }
 
-	ButtonTurbo();
+    }
+    // LAWRENCE: I don't know what this does, so I'm commenting it out.
+	//ButtonTurbo();
 }
 
 void TASInputDlg::UpdateFromSliders(wxCommandEvent& event)

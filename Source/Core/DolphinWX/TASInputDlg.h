@@ -68,14 +68,16 @@ class TASInputDlg : public wxDialog
         int shmfd;
 
         typedef struct {
-            unsigned int id; // For Debugging
-            unsigned int p1d;
-            unsigned int p2d;
-            float p1x;
-            float p2x;
-            float p1y;
-            float p2y;
+        	unsigned int id; // For Debugging
+        	unsigned int p1d;
+        	unsigned int p2d;
+        	unsigned int p1x;
+        	unsigned int p2x;
+        	unsigned int p1y;
+        	unsigned int p2y;
             uint8_t bmask;
+            uint8_t controls[2];
+            bool buttons[6];
             uint32_t padding[10];
         } NovaState;
 
